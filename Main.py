@@ -74,7 +74,6 @@ def weerstation():
         except ValueError:
             print("Ongeldige invoer voor vochtigheid, geef een geheel getal tussen 0 en 100.")
             continue
-        import os
 
 
 
@@ -131,13 +130,11 @@ def weerstation():
 
         def overwrite_settings(outputFile: str) -> int:
             """Laat gebruiker actuatorwaarde overschrijven voor een bepaalde datum."""
-            if not os.path.exists(outputFile):
-                print("Uitvoerbestand bestaat nog niet. Kies eerst optie 2.")
-                return -1
 
             datum = input("Voer de datum in (dd-mm-jjjj): ").strip()
             systeem = input("Kies systeem (1=CV ketel, 2=Ventilatie, 3=Bewatering): ").strip()
             nieuwe_waarde = input("Nieuwe waarde: ").strip()
+
 
             if systeem not in {"1", "2", "3"}:
                 print("Ongeldig systeem gekozen.")
@@ -158,6 +155,8 @@ def weerstation():
                 if r_datum != datum:
                     nieuwe_regels.append(regel)
                     continue
+
+
 
                 # Overschrijven per systeem
                 if systeem == "1":  # CV-ketel
