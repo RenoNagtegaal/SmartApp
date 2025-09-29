@@ -1,3 +1,7 @@
+# Bestandsnamen vast ingesteld
+INPUT_FILE = "invoer.txt"
+OUTPUT_FILE = "uitvoer.txt"
+
 def fahrenheit(temp_celcius: float) -> float:
     """Bereken temperatuur in Fahrenheit."""
     # Formule: F = 32 + 1.8 * C
@@ -70,6 +74,166 @@ def weerstation():
         except ValueError:
             print("Ongeldige invoer voor vochtigheid, geef een geheel getal tussen 0 en 100.")
             continue
+        import os
+
+
+
+        def aantal_dagen(inputFile: str) -> int:
+            """Lees het inputbestand en tel het aantal dagen (excl. header)."""
+            try:
+                with open(inputFile, "r") as f:
+                    regels = f.readlines()
+                return len(regels) - 1  # Eerste regel is header
+            except FileNotFoundError:
+                print(f"Bestand {inputFile} niet gevonden.")
+                return 0
+
+        def auto_bereken(inputFile: str, outputFile: str) -> None:
+            """Lees invoerbestand, bereken actuatorwaarden en schrijf naar uitvoerbestand."""
+            try:
+                with open(inputFile, "r") as f:
+                    regels = f.readlines()
+            except FileNotFoundError:
+                print(f"Bestand {inputFile} niet gevonden.")
+                return
+
+            data_regels = regels[1:]  # sla de header over
+
+            with open(outputFile, "w") as out:
+                for regel in data_regels:
+                    velden = regel.strip().split(";")
+                    if len(velden) != 5:
+                        continue
+                    datum, personen, setpoint, buiten, neerslag = velden
+                    personen = int(personen)
+                    setpoint = float(setpoint)
+                    buiten = float(buiten)
+                    neerslag = float(neerslag)
+
+                    # CV-ketel berekenen
+                    verschil = setpoint - buiten
+                    if verschil >= 20:
+                        cv = 100
+                    elif verschil >= 10:
+                        cv = 50
+                    else:
+                        cv = 0
+
+                    # Ventilatie berekenen
+                    ventilatie = min(personen + 1, 4)
+
+                    # Bewatering berekenen
+                    bewatering = "True" if neerslag < 3 else "False"
+
+                    out.write(f"{datum};{cv};{ventilatie};{bewatering}\n")
+
+            print(f"Uitvoerbestand '{outputFile}' is bijgewerkt.")
+
+        def overwrite_settings(outputFile: str) -> int:
+            """Laat gebruiker actuatorwaarde overschrijven voor een bepaalde datum."""
+            if not os.path.exists(outputFile):
+                print("Uitvoerbestand bestaat nog niet. Kies eerst optie 2.")
+                return -1
+
+            datum = input("Voer de datum in (dd-mm-jjjj): ").strip()
+            systeem = input("Kies systeem (1=CV ketel, 2=Ventilatie, 3=Bewatering): ").strip()
+            nieuwe_waarde = input("Nieuwe waarde: ").strip()
+
+            if systeem not in {"1", "2", "3"}:
+                print("Ongeldig systeem gekozen.")
+                return -3
+
+            with open(outputFile, "r") as f:
+                regels = f.readlines()
+
+            aangepast = False
+            nieuwe_regels = []
+            for regel in regels:
+                velden = regel.strip().split(";")
+                if len(velden) != 4:
+                    nieuwe_regels.append(regel)
+                    continue
+
+                r_datum, cv, ventilatie, bewatering = velden
+                if r_datum != datum:
+                    nieuwe_regels.append(regel)
+                    continue
+
+                # Overschrijven per systeem
+                if systeem == "1":  # CV-ketel
+                    try:
+                        waarde = int(nieuwe_waarde)
+                        if 0 <= waarde <= 100:
+                            cv = str(waarde)
+                        else:
+                            print("Ongeldige waarde voor CV ketel (0-100).")
+                            return -3
+                    except ValueError:
+                        print("Geen geldig getal voor CV ketel.")
+                        return -3
+
+                elif systeem == "2":  # Ventilatie
+                    try:
+                        waarde = int(nieuwe_waarde)
+                        if 0 <= waarde <= 4:
+                            ventilatie = str(waarde)
+                        else:
+                            print("Ongeldige waarde voor ventilatie (0-4).")
+                            return -3
+                    except ValueError:
+                        print("Geen geldig getal voor ventilatie.")
+                        return -3
+
+                elif systeem == "3":  # Bewatering
+                    if nieuwe_waarde not in {"0", "1"}:
+                        print("Ongeldige waarde voor bewatering (0=uit,1=aan).")
+                        return -3
+                    bewatering = "True" if nieuwe_waarde == "1" else "False"
+
+                nieuwe_regels.append(f"{r_datum};{cv};{ventilatie};{bewatering}\n")
+                aangepast = True
+
+            if not aangepast:
+                print("Datum niet gevonden.")
+                return -1
+
+            with open(outputFile, "w") as f:
+                f.writelines(nieuwe_regels)
+
+            print("Waarde succesvol aangepast.")
+            return 0
+
+        def smart_app_controller():
+            """Menu om de smart app te bedienen."""
+            while True:
+                print("\n--- SMART APP MENU ---")
+                print("1. Aantal dagen weergeven")
+                print("2. Autobereken en uitvoerbestand schrijven")
+                print("3. Waarde overschrijven in uitvoerbestand")
+                print("4. Stoppen")
+
+                keuze = input("Maak een keuze: ").strip()
+
+                if keuze == "1":
+                    dagen = aantal_dagen(INPUT_FILE)
+                    print(f"Aantal dagen in bestand: {dagen}")
+
+                elif keuze == "2":
+                    auto_bereken(INPUT_FILE, OUTPUT_FILE)
+
+                elif keuze == "3":
+                    overwrite_settings(OUTPUT_FILE)
+
+                elif keuze == "4":
+                    print("Programma gestopt.")
+                    break
+
+                else:
+                    print("Ongeldige keuze, probeer opnieuw.")
+
+        # Start applicatie
+        if __name__ == "__main__":
+            smart_app_controller()
 
         # --- Opslaan en berekenen ---
         temperaturen.append(temp_c)                     # Toevoegen aan lijst
